@@ -1,0 +1,9 @@
+../User/Src/llcc68_app.c:43:17:LLCC68_Init	80	static
+../User/Src/llcc68_app.c:188:17:LLCC68_Send	24	static
+../User/Src/llcc68_app.c:207:17:LLCC68_Receive	16	static
+../User/Src/llcc68_app.c:218:6:LLCC68_Wait_Busy	8	static
+../User/Src/llcc68_app.c:223:6:LLCC68_TransmitCallback	8	static
+../User/Src/llcc68_app.c:228:6:LLCC68_ReceiveCallback	16	static
+../User/Src/llcc68_app.c:240:6:Driver_Wait_Busy	8	static,ignoring_inline_asm
+../User/Src/llcc68_app.c:252:6:Driver_TransmitCallback	16	static
+../User/Src/llcc68_app.c:277:6:Driver_ReceiveCallback	24	static

@@ -1,0 +1,4 @@
+../User/Src/llcc68_hal.c:37:21:llcc68_hal_write	64	dynamic
+../User/Src/llcc68_hal.c:81:21:llcc68_hal_read	104	dynamic
+../User/Src/llcc68_hal.c:123:21:llcc68_hal_reset	16	static
+../User/Src/llcc68_hal.c:144:21:llcc68_hal_wakeup	16	static
