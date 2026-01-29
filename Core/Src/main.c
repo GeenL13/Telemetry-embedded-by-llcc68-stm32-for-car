@@ -35,7 +35,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define CAN_FRAME_BUFFER_SIZE 20  // CAN数据帧缓冲区大小
 
 /* USER CODE END PTD */
 
@@ -43,7 +43,7 @@
 /* USER CODE BEGIN PD */
 
 // 配置
-#define MODEL	0	// 收发模式   1：发送；0：接收
+#define MODEL	1	// 收发模式   1：发送；0：接收
 
 
 
@@ -73,12 +73,13 @@ typedef struct __attribute__((__packed__))
 } can_frame_t;
 
 // CAN数据帧环形缓冲区
-can_frame_t can_frame_buffer[20] = {0};
+can_frame_t can_frame_buffer[CAN_FRAME_BUFFER_SIZE] = {0};
 uint8_t can_frame_current_send_index = 0;
 uint8_t can_frame_current_receive_index = 0;
-uint8_t can_frame_buffer_send_count = 0;
-uint8_t can_frame_buffer_receive_count = 0;
 
+// 必须添加 volatile，防止编译器优化导致主循环无法读取到中断更新的值
+volatile uint8_t can_frame_buffer_send_count = 0;
+volatile uint8_t can_frame_buffer_receive_count = 0;
 
 // 接收缓存区
 uint8_t llcc68_rx_buffer[128] = {0};
@@ -163,20 +164,21 @@ int main(void)
     // 检测发送标志位以及发送数据
     if (can_frame_buffer_send_count != can_frame_buffer_receive_count && MODEL == 1)
     {
+      uint8_t index = can_frame_current_send_index;
       // 填入帧头
-      can_frame_buffer[can_frame_current_send_index].frame_start_1 = 0x55;
-      can_frame_buffer[can_frame_current_send_index].frame_start_2 = 0xAA;
+      can_frame_buffer[index].frame_start_1 = 0x55;
+      can_frame_buffer[index].frame_start_2 = 0xAA;
       // 填入保留字节
-      can_frame_buffer[can_frame_current_send_index].reserved = 0;
+      can_frame_buffer[index].reserved = 0;
       // 计算crc
-      can_frame_buffer[can_frame_current_send_index].crc = Calculate_CRC16((uint8_t*)&can_frame_buffer[can_frame_current_send_index], sizeof(can_frame_t) - 2);
+      can_frame_buffer[index].crc = Calculate_CRC16((uint8_t*)&can_frame_buffer[index], sizeof(can_frame_t) - 2);
       // 无线发送数据
-      LLCC68_Send((uint8_t*)&can_frame_buffer[can_frame_current_send_index], sizeof(can_frame_t));
+      LLCC68_Send((uint8_t*)&can_frame_buffer[index], sizeof(can_frame_t));
       // 发送成功指示灯
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET);
       pb12_tick = tick;
       // 更新索引和计数
-      can_frame_current_send_index = (can_frame_current_send_index + 1) % 20;
+      can_frame_current_send_index = (can_frame_current_send_index + 1) % CAN_FRAME_BUFFER_SIZE;
       can_frame_buffer_send_count++;
     }
 
@@ -187,7 +189,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_Delay(1);
+    if (can_frame_buffer_send_count == can_frame_buffer_receive_count)
+    {
+        HAL_Delay(1); 
+    }
 
   }
   /* USER CODE END 3 */
@@ -329,11 +334,6 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
   {
 	  return;
   }
-  // 如果接收缓冲区饱和则直接丢弃
-  if ((uint8_t)(can_frame_buffer_receive_count - can_frame_buffer_send_count) >= 18)  //强制将结果作为uint类型，利用uint溢出特性可以计算差值，防止编译器自动把结果提升成int导致出现负数
-  {
-      return;
-  }
 
   // can数据存储变量
 	CAN_RxHeaderTypeDef header;
@@ -341,6 +341,12 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 	// 从FIFO中读取数据
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &header, data);
+
+  // 如果接收缓冲区饱和则直接丢弃
+  if ((uint8_t)(can_frame_buffer_receive_count - can_frame_buffer_send_count) >= CAN_FRAME_BUFFER_SIZE - 2)  //强制将结果作为uint类型，利用uint溢出特性可以计算差值，防止编译器自动把结果提升成int导致出现负数
+  {
+      return;
+  }
 
 	// 是目标ID则进行填充并置发送标志位
 	switch (header.StdId)
@@ -362,9 +368,10 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
       can_frame_buffer[can_frame_current_receive_index].rtr = (header.RTR == CAN_RTR_DATA) ? 0 : 1;
       can_frame_buffer[can_frame_current_receive_index].dlc = header.DLC;
       can_frame_buffer[can_frame_current_receive_index].id = (header.IDE == CAN_ID_STD) ? header.StdId : header.ExtId;
-      memcpy(can_frame_buffer[can_frame_current_receive_index].data, data, header.DLC);
+      memcpy(can_frame_buffer[can_frame_current_receive_index].data, data, 8);	// 此处应当固定8字节，以防内存界限出现错误
       // 更新索引和计数
-      can_frame_current_receive_index = (can_frame_current_receive_index + 1) % 20;
+      can_frame_current_receive_index = (can_frame_current_receive_index + 1) % CAN_FRAME_BUFFER_SIZE;
+      
       can_frame_buffer_receive_count++;
 			break;
 
