@@ -6,8 +6,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../User/Src/Can_Config.c \
-../User/Src/Lora.c \
-../User/Src/Wireless_Package.c \
+../User/Src/can_receive_control.c \
 ../User/Src/llcc68.c \
 ../User/Src/llcc68_app.c \
 ../User/Src/llcc68_driver_version.c \
@@ -15,8 +14,7 @@ C_SRCS += \
 
 OBJS += \
 ./User/Src/Can_Config.o \
-./User/Src/Lora.o \
-./User/Src/Wireless_Package.o \
+./User/Src/can_receive_control.o \
 ./User/Src/llcc68.o \
 ./User/Src/llcc68_app.o \
 ./User/Src/llcc68_driver_version.o \
@@ -24,8 +22,7 @@ OBJS += \
 
 C_DEPS += \
 ./User/Src/Can_Config.d \
-./User/Src/Lora.d \
-./User/Src/Wireless_Package.d \
+./User/Src/can_receive_control.d \
 ./User/Src/llcc68.d \
 ./User/Src/llcc68_app.d \
 ./User/Src/llcc68_driver_version.d \
@@ -39,7 +36,7 @@ User/Src/%.o User/Src/%.su User/Src/%.cyclo: ../User/Src/%.c User/Src/subdir.mk
 clean: clean-User-2f-Src
 
 clean-User-2f-Src:
-	-$(RM) ./User/Src/Can_Config.cyclo ./User/Src/Can_Config.d ./User/Src/Can_Config.o ./User/Src/Can_Config.su ./User/Src/Lora.cyclo ./User/Src/Lora.d ./User/Src/Lora.o ./User/Src/Lora.su ./User/Src/Wireless_Package.cyclo ./User/Src/Wireless_Package.d ./User/Src/Wireless_Package.o ./User/Src/Wireless_Package.su ./User/Src/llcc68.cyclo ./User/Src/llcc68.d ./User/Src/llcc68.o ./User/Src/llcc68.su ./User/Src/llcc68_app.cyclo ./User/Src/llcc68_app.d ./User/Src/llcc68_app.o ./User/Src/llcc68_app.su ./User/Src/llcc68_driver_version.cyclo ./User/Src/llcc68_driver_version.d ./User/Src/llcc68_driver_version.o ./User/Src/llcc68_driver_version.su ./User/Src/llcc68_hal.cyclo ./User/Src/llcc68_hal.d ./User/Src/llcc68_hal.o ./User/Src/llcc68_hal.su
+	-$(RM) ./User/Src/Can_Config.cyclo ./User/Src/Can_Config.d ./User/Src/Can_Config.o ./User/Src/Can_Config.su ./User/Src/can_receive_control.cyclo ./User/Src/can_receive_control.d ./User/Src/can_receive_control.o ./User/Src/can_receive_control.su ./User/Src/llcc68.cyclo ./User/Src/llcc68.d ./User/Src/llcc68.o ./User/Src/llcc68.su ./User/Src/llcc68_app.cyclo ./User/Src/llcc68_app.d ./User/Src/llcc68_app.o ./User/Src/llcc68_app.su ./User/Src/llcc68_driver_version.cyclo ./User/Src/llcc68_driver_version.d ./User/Src/llcc68_driver_version.o ./User/Src/llcc68_driver_version.su ./User/Src/llcc68_hal.cyclo ./User/Src/llcc68_hal.d ./User/Src/llcc68_hal.o ./User/Src/llcc68_hal.su
 
 .PHONY: clean-User-2f-Src
 

@@ -1,8 +1,8 @@
-../Core/Src/main.c:114:5:main	3
-../Core/Src/main.c:205:6:SystemClock_Config	3
-../Core/Src/main.c:244:10:Calculate_CRC16	4
-../Core/Src/main.c:264:6:HAL_GPIO_EXTI_Callback	5
-../Core/Src/main.c:293:6:HAL_TIM_PeriodElapsedCallback	8
-../Core/Src/main.c:320:6:HAL_UART_TxCpltCallback	1
-../Core/Src/main.c:330:6:HAL_CAN_RxFifo1MsgPendingCallback	6
-../Core/Src/main.c:393:6:Error_Handler	1
+../Core/Src/main.c:119:5:main	2
+../Core/Src/main.c:235:6:SystemClock_Config	3
+../Core/Src/main.c:274:10:Calculate_CRC16	4
+../Core/Src/main.c:294:6:HAL_GPIO_EXTI_Callback	5
+../Core/Src/main.c:323:6:HAL_TIM_PeriodElapsedCallback	8
+../Core/Src/main.c:350:6:HAL_UART_TxCpltCallback	1
+../Core/Src/main.c:360:6:HAL_CAN_RxFifo1MsgPendingCallback	1
+../Core/Src/main.c:414:6:Error_Handler	1

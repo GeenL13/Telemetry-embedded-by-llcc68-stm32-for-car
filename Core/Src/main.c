@@ -31,6 +31,7 @@
 #include "llcc68.h"
 #include "llcc68_app.h"
 #include "Can_Config.h"
+#include "can_receive_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,7 +44,7 @@
 /* USER CODE BEGIN PD */
 
 // 配置
-#define MODEL	1	// 收发模式   1：发送；0：接收
+#define MODEL	0	// 收发模式   1：发送；0：接收
 
 
 
@@ -57,6 +58,9 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+// llcc68接收数据许可
+extern volatile uint8_t able_to_send;
 
 // CAN数据帧
 typedef struct __attribute__((__packed__))
@@ -82,11 +86,12 @@ volatile uint8_t can_frame_buffer_send_count = 0;
 volatile uint8_t can_frame_buffer_receive_count = 0;
 
 // 接收缓存区
-uint8_t llcc68_rx_buffer[128] = {0};
+uint8_t llcc68_rx_buffer[256] = {0};
 
 
 // 中断计时变量
 uint32_t tick = 0;
+uint32_t wireless_send_tick = 0;
 uint32_t pb12_tick = 0;
 uint32_t pb13_tick = 0;
 uint32_t pb14_tick = 0;
@@ -164,24 +169,49 @@ int main(void)
     // 检测发送标志位以及发送数据
     if (can_frame_buffer_send_count != can_frame_buffer_receive_count && MODEL == 1)
     {
-      uint8_t index = can_frame_current_send_index;
-      // 填入帧头
-      can_frame_buffer[index].frame_start_1 = 0x55;
-      can_frame_buffer[index].frame_start_2 = 0xAA;
-      // 填入保留字节
-      can_frame_buffer[index].reserved = 0;
-      // 计算crc
-      can_frame_buffer[index].crc = Calculate_CRC16((uint8_t*)&can_frame_buffer[index], sizeof(can_frame_t) - 2);
-      // 无线发送数据
-      LLCC68_Send((uint8_t*)&can_frame_buffer[index], sizeof(can_frame_t));
-      // 发送成功指示灯
-      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET);
-      pb12_tick = tick;
-      // 更新索引和计数
-      can_frame_current_send_index = (can_frame_current_send_index + 1) % CAN_FRAME_BUFFER_SIZE;
-      can_frame_buffer_send_count++;
-    }
+      static uint8_t count = 0;
+      static can_frame_t send_buffer[6] = {0};
 
+      // 若 send_buffer 未满则继续填充数据
+      if (count < sizeof(send_buffer) / sizeof(can_frame_t))
+      {
+        // 将数据拷贝到软件发送缓冲区
+        memcpy(&send_buffer[count], &can_frame_buffer[can_frame_current_send_index], sizeof(can_frame_t));
+
+        // 更新索引和计数
+        can_frame_current_send_index = (can_frame_current_send_index + 1) % CAN_FRAME_BUFFER_SIZE;
+        can_frame_buffer_send_count++;
+
+        // 发送缓存区计数加一
+        count++;
+      }
+
+      uint8_t buffer_full = (count >= (sizeof(send_buffer) / sizeof(can_frame_t))) ? 1 : 0;
+      uint8_t timeout = (HAL_GetTick() - wireless_send_tick >= 500) ? 1 : 0;
+      
+      // 若 send_buffer 满或超时则发送数据
+      if (buffer_full || timeout)
+      {
+        // 无线发送数据
+        if (LLCC68_Send((uint8_t*)send_buffer, sizeof(send_buffer)) == LLCC68_STATUS_OK)
+        {
+          // 清除count计数
+          count = 0;
+          // 发送成功指示灯
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET);
+          pb12_tick = tick;
+          // 更新时间戳
+          wireless_send_tick = tick;
+          // 发送成功后清空发送缓存区
+          memset(send_buffer, 0, sizeof(send_buffer));
+        }
+        else
+        {
+          // 发送失败处理（可选）
+        }
+
+      }
+    }
 
     // 正常运行好指示灯
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -274,7 +304,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     }
     else if (irq_status == LLCC68_IRQ_RX_DONE)
     {
-      LLCC68_ReceiveCallback(llcc68_rx_buffer, sizeof(llcc68_rx_buffer));
+      LLCC68_ReceiveCallback((uint8_t*)llcc68_rx_buffer, (uint8_t)sizeof(llcc68_rx_buffer));
     }
     else if (irq_status == LLCC68_IRQ_TIMEOUT)
     {
@@ -348,36 +378,27 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
       return;
   }
 
-	// 是目标ID则进行填充并置发送标志位
-	switch (header.StdId)
-	{
-		case 0xC1:
-		case 0xC2:
-		case 0xC3:
-		case 0xC4:
-		case 0xC5:
-		case 0xC6:
-		case 0xC7:
-		case 0xC8:
-		case 0xC9:
-		case 0xCA:
-		case 0xCB:
-		case 0x1A:
-      // 填充数据帧
-      can_frame_buffer[can_frame_current_receive_index].ide = (header.IDE == CAN_ID_STD) ? 0 : 1;
-      can_frame_buffer[can_frame_current_receive_index].rtr = (header.RTR == CAN_RTR_DATA) ? 0 : 1;
-      can_frame_buffer[can_frame_current_receive_index].dlc = header.DLC;
-      can_frame_buffer[can_frame_current_receive_index].id = (header.IDE == CAN_ID_STD) ? header.StdId : header.ExtId;
-      memcpy(can_frame_buffer[can_frame_current_receive_index].data, data, 8);	// 此处应当固定8字节，以防内存界限出现错误
-      // 更新索引和计数
-      can_frame_current_receive_index = (can_frame_current_receive_index + 1) % CAN_FRAME_BUFFER_SIZE;
-      
-      can_frame_buffer_receive_count++;
-			break;
+	// 符合接收条件则存储数据
+  if (check_and_update_cooldown(header.StdId) == 0)
+  {
+    // 填充数据帧
+    can_frame_buffer[can_frame_current_receive_index].frame_start_1 = 0x55;
+    can_frame_buffer[can_frame_current_receive_index].frame_start_2 = 0xAA;
+    can_frame_buffer[can_frame_current_receive_index].ide = (header.IDE == CAN_ID_STD) ? 0 : 1;
+    can_frame_buffer[can_frame_current_receive_index].rtr = (header.RTR == CAN_RTR_DATA) ? 0 : 1;
+    can_frame_buffer[can_frame_current_receive_index].dlc = header.DLC;
+    can_frame_buffer[can_frame_current_receive_index].id = (header.IDE == CAN_ID_STD) ? header.StdId : header.ExtId;
+    memcpy(can_frame_buffer[can_frame_current_receive_index].data, data, 8);	// 此处应当固定8字节，以防内存界限出现错误
+    // 计算crc
+    can_frame_buffer[can_frame_current_receive_index].crc = Calculate_CRC16((uint8_t*)&can_frame_buffer[can_frame_current_receive_index], sizeof(can_frame_t) - 2);
 
-		default:
-			break;
-	}
+    // 更新索引和计数
+    can_frame_current_receive_index = (can_frame_current_receive_index + 1) % CAN_FRAME_BUFFER_SIZE;
+
+    can_frame_buffer_receive_count++;
+  }
+
+
 
 }
 

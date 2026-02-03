@@ -36,6 +36,9 @@ llcc68_pkt_params_lora_t pkt_params   // LoRa包参数
 uint32_t tx_base_address;
 uint32_t rx_base_address;
 
+// 允许无线发射标志位
+volatile uint8_t able_to_send = 1;
+
 // -------- 外部接口 -------- //
 
 // 无线发送接收初始化
@@ -152,7 +155,7 @@ llcc68_status_t LLCC68_Init(uint8_t model)
     if (model)	// 1:发送   0:接收
     {
       // 发射模式
-      Res = llcc68_set_tx(NULL, 3000); // 设置超时时间为3000毫秒
+      // Res = llcc68_set_tx(NULL, 3000); // 设置超时时间为3000毫秒
       if (Res != LLCC68_STATUS_OK) return Res;
     }
     else
@@ -187,6 +190,13 @@ llcc68_status_t LLCC68_Init(uint8_t model)
 // 发送数据地址，发送数据大小
 llcc68_status_t LLCC68_Send(uint8_t* send_buf, uint8_t send_buf_size)
 {
+    // 发送数据前检查是否允许发送
+    if (!able_to_send) {
+        return LLCC68_STATUS_ERROR;
+    }
+    // 取消发射许可
+    able_to_send = 0;
+
 	llcc68_status_t Res;
 	// 更新包长度配置
 	pkt_params.pld_len_in_bytes = send_buf_size;
@@ -251,10 +261,12 @@ void Driver_Wait_Busy(void)
 // 发送回调逻辑
 void Driver_TransmitCallback(void)
 {
+    // 允许再次发送
+    able_to_send = 1;
+
 	llcc68_status_t Res;
 	// 处理发送完成事件
 	// 清除TxDone中断标志
-
 	Res = llcc68_clear_irq_status(NULL, LLCC68_IRQ_TX_DONE);
 
     uint8_t send_buf[] = "blue";

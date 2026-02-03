@@ -10,6 +10,8 @@
 
 #include "llcc68.h"
 
+extern volatile uint8_t able_to_send;
+
 llcc68_status_t LLCC68_Init(uint8_t model);
 llcc68_status_t LLCC68_Send(uint8_t* send_buf, uint8_t send_buf_size);
 llcc68_status_t LLCC68_Receive(void);
