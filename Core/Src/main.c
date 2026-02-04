@@ -44,7 +44,7 @@
 /* USER CODE BEGIN PD */
 
 // 配置
-#define MODEL	0	// 收发模式   1：发送；0：接收
+#define MODEL	1	// 收发模式   1：发送；0：接收
 
 
 
@@ -198,8 +198,8 @@ int main(void)
           // 清除count计数
           count = 0;
           // 发送成功指示灯
-          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, SET);
-          pb12_tick = tick;
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, SET);
+          pb13_tick = tick;
           // 更新时间戳
           wireless_send_tick = tick;
           // 发送成功后清空发送缓存区
