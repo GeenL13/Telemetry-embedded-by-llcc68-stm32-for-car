@@ -1,9 +1,0 @@
-../User/Src/llcc68_app.c:46:17:LLCC68_Init	18
-../User/Src/llcc68_app.c:191:17:LLCC68_Send	4
-../User/Src/llcc68_app.c:217:17:LLCC68_Receive	2
-../User/Src/llcc68_app.c:228:6:LLCC68_Wait_Busy	1
-../User/Src/llcc68_app.c:233:6:LLCC68_TransmitCallback	1
-../User/Src/llcc68_app.c:238:6:LLCC68_ReceiveCallback	1
-../User/Src/llcc68_app.c:250:6:Driver_Wait_Busy	2
-../User/Src/llcc68_app.c:262:6:Driver_TransmitCallback	1
-../User/Src/llcc68_app.c:289:6:Driver_ReceiveCallback	3
